@@ -110,7 +110,7 @@ void loop()                       //Main program loop
     quick_beep();
     straight_key = false;                              //make sure straight key mode is off
     loadWPM(wpm);                                 //Update the current keyer speed
-    announce();
+    //announce();
   }
 
   if (state_su == FIN_WAIT) {           // long press of up button saves wpm to EEPROM
@@ -124,18 +124,18 @@ void loop()                       //Main program loop
     quick_beep();
     straight_key = false;
     loadWPM(wpm);                                 //Update the current keyer speed
-    announce();
+    //announce();
   }
   else if ( (state_sd == SHORT) && (wpm = 5)) {
     wpm -= 2;
     quick_beep();
     straight_key = true;
     loadWPM(wpm); 
-    announce();       
+    //announce();       
   }
   else if ((state_sd == SHORT) && (wpm < 5)) {
     straight_key = true;
-    announce();
+    //announce();
   }
   if (state_sd == LONG) {             // tune function if down button long press
       xmit_on();

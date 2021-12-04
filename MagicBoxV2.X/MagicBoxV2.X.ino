@@ -1,7 +1,14 @@
 /* Firmware for MagicBox V2.X - 11/18/2021
   by Jim Kortge K8IQY and Mike Maiorana KU4QO
+  Down button:
+    quick press - reduce cw speed
+    long press  - tune mode turns on transmitter for 10 seconds. Cancel by pressing again.
+  Up button:
+    quick press - increase cw speed
+    long press  - save current cw speed to EEPROM. Use at power up.
+    double quick press - announce current cw speed with the sidetone. Sent at current cw speed.
 */
-#define VERSION 12032021
+#define VERSION 12032021-2
 
 #include <EEPROM.h>
 
@@ -41,9 +48,10 @@ static long ktimer;                               // timer variable for keyer
 unsigned long t_su = 0;
 unsigned long t_sd = 0;
 unsigned long bounce_delay = 10;
+unsigned long double_delay = 200;
 unsigned long hold_delay = 500;
 unsigned long tune_timeout = 10000;
-enum FSM {RST, WAIT, ARM, DEBOUNCE, LIFT, SHORT, LONG, RELEASE, CANCEL, FIN, FIN_WAIT};
+enum FSM {RST, WAIT, ARM, DEBOUNCE, LIFT, SHORT, ARMDBL, CHKDBL, DBL, LONG, RELEASE, CANCEL, FIN, FIN_WAIT};
 FSM state_su;  //new variable of enumeration type FSM for switch "up"
 FSM state_sd;  //new variable of enumeration type FSM for switch "down"
 
@@ -116,6 +124,10 @@ void loop()                       //Main program loop
   if (state_su == FIN_WAIT) {           // long press of up button saves wpm to EEPROM
     save_keyer();
     quick_beep();
+  }
+
+  if ( state_su == DBL) {
+    announce();
   }
 
   fsm_sd();

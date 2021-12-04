@@ -28,11 +28,29 @@ void fsm_su() {                                 //Switch UP state machine
 
     case LIFT:
       if (digitalRead(SPD_UP) == HIGH) {
-        state_su = SHORT;
+        state_su = ARMDBL;
       }
       if (millis() - t_su > hold_delay) {state_su = LONG;}
       break;
 
+    case ARMDBL:
+      t_su = millis();
+      state_su = CHKDBL;
+      break;
+
+    case CHKDBL:
+      if (millis() - t_su > double_delay) {
+        state_su = SHORT;
+      }
+      if ((millis() - t_su < double_delay) && (digitalRead(SPD_UP) == LOW)) {
+        state_su = DBL;
+      }
+      break;
+
+    case DBL:
+      state_su = RST;
+      break;
+      
     case SHORT:
       state_su = RST;
       break;

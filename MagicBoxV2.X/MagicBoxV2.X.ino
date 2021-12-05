@@ -34,6 +34,8 @@
 
 #define EE_KEYER_SPEED  0    // spot to save keyer speed
 
+#define INCR 2                  //cw speed increment/decrement value
+
 //set up for keyer
 unsigned long       ditTime;                       // No. milliseconds per dit
 unsigned char       keyerControl;
@@ -115,7 +117,7 @@ void loop()                                       //Main program loop
   //CW speed changes using SPD_UP and SPD_DWN switches
   fsm_su();                                      // run switch up state machine
   if ((state_su == SHORT) && (wpm < 35)) {      //if active, increment the wpm speed unless at upper limit
-    wpm += 2;
+    wpm += INCR;
     quick_beep();
     straight_key = false;                        //make sure straight key mode is off
     loadWPM(wpm);                                //Update the current keyer speed
@@ -130,13 +132,13 @@ void loop()                                       //Main program loop
 
   fsm_sd();
   if ((state_sd == SHORT) && (wpm > 5)) {        //if active, decrement the wpm speed unless at lower limit
-    wpm -= 2;
+    wpm -= INCR;
     quick_beep();
     straight_key = false;
     loadWPM(wpm);                                 //Update the current keyer speed
   }
   else if ( (state_sd == SHORT) && (wpm = 5)) {   //if down switch pressed at 5wpm, go to straight key mode
-    wpm -= 2;
+    wpm -= INCR;
     quick_beep();
     straight_key = true;
     loadWPM(wpm);      

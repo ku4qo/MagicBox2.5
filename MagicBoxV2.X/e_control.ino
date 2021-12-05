@@ -78,16 +78,20 @@ void dit_tone()                         //dit sidetone for cw speed announcement
 {
     digitalWrite(SIDETONE, HIGH);
     delay(ditTime);
+    //delay(120);                       //uncomment these for and comment other delays for fixed cw speed announce
     digitalWrite(SIDETONE, LOW);
     delay(ditTime);
+    //delay(120);
 }
 
 void dah_tone()                       //dah sidetone for cw speed announcement
 {
     digitalWrite(SIDETONE, HIGH);
     delay(3 * ditTime);
+    //delay(360);
     digitalWrite(SIDETONE, LOW);
     delay(ditTime);
+    //delay(120);
 }
 
 void save_keyer()

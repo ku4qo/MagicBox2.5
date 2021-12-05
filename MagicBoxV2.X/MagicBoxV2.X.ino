@@ -50,7 +50,7 @@ unsigned long t_sd = 0;                   //timer for down switch
 const unsigned long bounce_delay = 10;    //debounce timer in milliseconds
 const unsigned long double_delay = 200;   //double-press timeout in milliseconds
 const unsigned long hold_delay = 500;     //long-press timeout in milliseconds
-const unsigned long qsk_timeout = 2000;   //RX timeout for non-QSK mode in milliseconds
+const unsigned long qsk_timeout = 1500;   //RX timeout for non-QSK mode in milliseconds
 const unsigned long tune_timeout = 10000; //tune mode timer in milliseconds
 unsigned long qsk_timer;                  //variable holds non-QSK mode timer
 bool qsk_enable;                          //flag to track QSK mode. True is full QSK on.
@@ -114,7 +114,7 @@ void loop()                                       //Main program loop
 
   //CW speed changes using SPD_UP and SPD_DWN switches
   fsm_su();                                      // run switch up state machine
-  if ((state_su == SHORT) && (wpm <= 35)) {      //if active, increment the wpm speed unless at upper limit
+  if ((state_su == SHORT) && (wpm < 35)) {      //if active, increment the wpm speed unless at upper limit
     wpm += 2;
     quick_beep();
     straight_key = false;                        //make sure straight key mode is off

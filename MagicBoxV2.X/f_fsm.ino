@@ -19,10 +19,10 @@ void fsm_su() {                                 //Switch UP state machine
 
     case DEBOUNCE:
       if (millis() - t_su > bounce_delay) {
-        state_su = LIFT; //if debounce timer expires - good press
+        state_su = LIFT;                        //if debounce timer expires - good press
       }
       if (digitalRead(SPD_UP) == HIGH) {
-        state_su = RST; //bounce, go back to reset state
+        state_su = RST;                         //bounce, go back to reset state
       }
       break;
 
@@ -90,10 +90,10 @@ void fsm_sd() {                               //Switch DOWN state machine
 
     case DEBOUNCE:
       if (millis() - t_sd > bounce_delay) {
-        state_sd = LIFT; //if debounce timer expires - good press
+        state_sd = LIFT;                        //if debounce timer expires - good press
       }
       if (digitalRead(SPD_DWN) == HIGH) {
-        state_sd = RST; //bounce, go back to reset state
+        state_sd = RST;                         //bounce, go back to reset state
       }
       break;
 
@@ -119,6 +119,7 @@ void fsm_sd() {                               //Switch DOWN state machine
       break;
 
     case CANCEL:
+      if (qsk_enable == false) qsk_timer = millis();        //kick qsk timer so tune mode doesn't time out Rx
       if (digitalRead(SPD_DWN) == LOW) {state_sd = FIN;}
       if (millis() - t_sd > tune_timeout) {state_sd = FIN;}
     break;

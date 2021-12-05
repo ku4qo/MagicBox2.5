@@ -10,7 +10,7 @@ void update_PaddleLatch()
   }
 }
 
-void loadWPM (float wpm)
+void loadWPM (float wpm)            //set dit time in milliseconds from wpm 
 {
   ditTime = 1200 / wpm;
 }
@@ -90,18 +90,18 @@ void check_keyer()
   
 }
 
-void check_sk(void)
+void check_sk(void)                       //straight key function. Read either dit or dah line and activate xmit.
 {
   if (digitalRead(PADDLE_DIT) == LOW || digitalRead(PADDLE_DAH) == LOW) {
     if (sk_on == false) {
       xmit_on();
-      sk_on = true;
+      sk_on = true;                       //track xmit status for straight key mode
     }
   }
-  else {
+  else {                                  //neither line active, turn off xmit
     if (sk_on == true) {
       xmit_off();
-      sk_on = false;
+      sk_on = false;                      //track xmit status for straight key mode
     }
   }
 }

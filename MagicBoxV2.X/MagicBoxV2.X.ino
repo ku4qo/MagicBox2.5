@@ -7,8 +7,9 @@
     quick press - increase cw speed
     long press  - save current cw speed to EEPROM. Use at power up.
     double quick press - announce current cw speed with the sidetone. Sent at current cw speed.
+  Non-QSK jumper disables full QSK and adds a timer to revert to RX mode after last TX.
 */
-#define VERSION 12032021-2
+#define VERSION 12042021
 
 #include <EEPROM.h>
 
@@ -38,24 +39,27 @@ unsigned long       ditTime;                       // No. milliseconds per dit
 unsigned char       keyerControl;
 unsigned char       keyerState;
 enum KSTYPE {IDLE, CHK_DIT, CHK_DAH, KEYED_PREP, KEYED, INTER_ELEMENT };
-int wpm = 15;                                   //Start CW at 15 wpm
-bool straight_key = false;
-bool sk_on = false;                               //tracking straight key transmit status
-unsigned long mt_timer;
-static long ktimer;                               // timer variable for keyer
+int wpm;                                   //holds cw speed
+bool straight_key = false;                 // straight key enable
+bool sk_on = false;                        //tracking straight key transmit status
+static long ktimer;                        // timer variable for keyer
 
 //input switches Finite State Machines
-unsigned long t_su = 0;
-unsigned long t_sd = 0;
-unsigned long bounce_delay = 10;
-unsigned long double_delay = 200;
-unsigned long hold_delay = 500;
-unsigned long tune_timeout = 10000;
+unsigned long t_su = 0;                   //timer for up switch
+unsigned long t_sd = 0;                   //timer for down switch
+const unsigned long bounce_delay = 10;    //debounce timer in milliseconds
+const unsigned long double_delay = 200;   //double-press timeout in milliseconds
+const unsigned long hold_delay = 500;     //long-press timeout in milliseconds
+const unsigned long qsk_timeout = 2000;   //RX timeout for non-QSK mode in milliseconds
+const unsigned long tune_timeout = 10000; //tune mode timer in milliseconds
+unsigned long qsk_timer;                  //variable holds non-QSK mode timer
+bool qsk_enable;                          //flag to track QSK mode. True is full QSK on.
+//enumeration for button state machines 
 enum FSM {RST, WAIT, ARM, DEBOUNCE, LIFT, SHORT, ARMDBL, CHKDBL, DBL, LONG, RELEASE, CANCEL, FIN, FIN_WAIT};
-FSM state_su;  //new variable of enumeration type FSM for switch "up"
-FSM state_sd;  //new variable of enumeration type FSM for switch "down"
+FSM state_su;                             //new variable of enumeration type FSM for switch "up"
+FSM state_sd;                             //new variable of enumeration type FSM for switch "down"
 
-int morse[10] {
+const int morse[10] {                     //array contains data to send numbers 0-9 in morse. 1=dit, 0=dah
 0b00000,
 0b00001,
 0b00011,
@@ -68,7 +72,7 @@ int morse[10] {
 0b10000
 };
 
-int int_wpm;
+int int_wpm;                              //integers used in announce routine to send CW speed in morse to sidetone
 int int_wpm_l;
 
 void setup () {
@@ -90,69 +94,60 @@ void setup () {
   pinMode(SIDETONE, OUTPUT);      //Side tone control line
   digitalWrite(SIDETONE, LOW);    //Initial low, so tone off during receive
 
-  loadWPM(wpm);                // set keyer speed
-
-  wpm = eeprom_read_dword((const uint32_t *)EE_KEYER_SPEED); //read saved keyer speed
+  wpm = eeprom_read_dword((const uint32_t *)EE_KEYER_SPEED);    //read saved keyer speed
     if (wpm < 0 | wpm > 35) {
-      wpm = 15;                                                //set wpm to 15 if unreasonable
-      eeprom_write_dword((uint32_t *)EE_KEYER_SPEED, wpm);
+      wpm = 15;                                                //set wpm to 15 if EEPROM value is unreasonable
+      eeprom_write_dword((uint32_t *)EE_KEYER_SPEED, wpm);     //save reasonable value to EEPROM
     }
-    if (wpm < 5) { straight_key = true;}
+    if (wpm < 5) straight_key = true;                         //set straight key mode if stored wpm < 5
+
+    loadWPM(wpm);                                             //set keyer speed  
 }
 
-void loop()                       //Main program loop
+void loop()                                       //Main program loop
 {
+  qsk_enable=digitalRead(NON_QSK);                //read non-QSK jumper and set system mode
+  
   //Routine to key system, either with keyer or straight key
-  if (straight_key == false) {
-    check_keyer();    //check for keyer operation
-
-  }
-  else {
-    check_sk();
-  }
+  if (straight_key == false) check_keyer();      //call keyer or straight key code depending on mode
+    else check_sk();
 
   //CW speed changes using SPD_UP and SPD_DWN switches
-  fsm_su();
+  fsm_su();                                      // run switch up state machine
   if ((state_su == SHORT) && (wpm <= 35)) {      //if active, increment the wpm speed unless at upper limit
     wpm += 2;
     quick_beep();
-    straight_key = false;                              //make sure straight key mode is off
-    loadWPM(wpm);                                 //Update the current keyer speed
-    //announce();
+    straight_key = false;                        //make sure straight key mode is off
+    loadWPM(wpm);                                //Update the current keyer speed
   }
-
-  if (state_su == FIN_WAIT) {           // long press of up button saves wpm to EEPROM
+  if (state_su == FIN_WAIT) {                    // long press of up button saves wpm to EEPROM
     save_keyer();
     quick_beep();
   }
-
-  if ( state_su == DBL) {
+  if ( state_su == DBL) {                        // double press to activate CW speed announcement
     announce();
   }
 
   fsm_sd();
-  if ((state_sd == SHORT) && (wpm > 5)) {         //if active, decrement the wpm speed unless at lower limit
+  if ((state_sd == SHORT) && (wpm > 5)) {        //if active, decrement the wpm speed unless at lower limit
     wpm -= 2;
     quick_beep();
     straight_key = false;
     loadWPM(wpm);                                 //Update the current keyer speed
-    //announce();
   }
-  else if ( (state_sd == SHORT) && (wpm = 5)) {
+  else if ( (state_sd == SHORT) && (wpm = 5)) {   //if down switch pressed at 5wpm, go to straight key mode
     wpm -= 2;
     quick_beep();
     straight_key = true;
-    loadWPM(wpm); 
-    //announce();       
+    loadWPM(wpm);      
   }
-  else if ((state_sd == SHORT) && (wpm < 5)) {
+  else if ((state_sd == SHORT) && (wpm < 5)) {  //down switch pressed when already in straight key mode. Do nothing.
     straight_key = true;
-    //announce();
   }
-  if (state_sd == LONG) {             // tune function if down button long press
-      xmit_on();
-    }
-    if (state_sd == FIN) {            // cancel tune
-      xmit_off();
-    }
+  if (state_sd == LONG) xmit_on();              // tune function if down button long press
+  if (state_sd == FIN) xmit_off();              // cancel tune function
+
+  if (qsk_enable == false) {                    // check qsk timer in non-QSK mode. Recover RX when timer expires.
+    if (((millis() - qsk_timer) > qsk_timeout ) && (digitalRead(RX_MUTE) == HIGH)) rx_on();
+  }
 }

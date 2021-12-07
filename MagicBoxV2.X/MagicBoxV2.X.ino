@@ -8,8 +8,9 @@
     long press  - save current cw speed to EEPROM. Use at power up.
     double quick press - announce current cw speed with the sidetone. Sent at current cw speed.
   Non-QSK jumper disables full QSK and adds a timer to revert to RX mode after last TX.
+  10k pot with wiper connected to A7 can adjust cw speed from 0 (straight key) to 35wpm
 */
-#define VERSION 12042021
+#define VERSION 12062021
 
 #include <EEPROM.h>
 
@@ -24,6 +25,7 @@
 #define RX_PIN        11        //Rx PIN diode path enable, 1=on, This line also controls the Rx audio path series switches
 #define TX_PIN        12        //Tx PIN diode path enable, 1=on
 #define TX_ENABLE     13        //Transmitter ON/OFF control line, 1=on
+#define SPD_DIAL      A7        //Input from cw speed potentiometer
 
 //keyercontrol flags
 #define     DIT_L      0x01     // Dit latch
@@ -34,7 +36,7 @@
 
 #define EE_KEYER_SPEED  0    // spot to save keyer speed
 
-#define INCR 2                  //cw speed increment/decrement value
+#define INCR 5                  //cw speed increment/decrement value
 
 //set up for keyer
 unsigned long       ditTime;                       // No. milliseconds per dit
@@ -42,6 +44,8 @@ unsigned char       keyerControl;
 unsigned char       keyerState;
 enum KSTYPE {IDLE, CHK_DIT, CHK_DAH, KEYED_PREP, KEYED, INTER_ELEMENT };
 int wpm;                                   //holds cw speed
+int a_wpm;                                 //analog reading of cw speed dial
+int a_wpm_save;                            //holds last dial cw reading
 bool straight_key = false;                 // straight key enable
 bool sk_on = false;                        //tracking straight key transmit status
 static long ktimer;                        // timer variable for keyer
@@ -102,12 +106,28 @@ void setup () {
       eeprom_write_dword((uint32_t *)EE_KEYER_SPEED, wpm);     //save reasonable value to EEPROM
     }
     if (wpm < 5) straight_key = true;                         //set straight key mode if stored wpm < 5
-
+    
     loadWPM(wpm);                                             //set keyer speed  
+    a_wpm_save = analogRead(SPD_DIAL) >> 5;                   //get initial dial position
 }
 
-void loop()                                       //Main program loop
+void loop()                                         //Main program loop
 {
+
+  a_wpm = analogRead(SPD_DIAL) >> 5;                //read potentiometer voltage and set keyer speed
+  if (a_wpm != a_wpm_save ) {                       //process dial reading only when it changes
+    a_wpm_save = a_wpm;                             //save last analog reading
+    if ( a_wpm == 0 ) {
+      straight_key=true;
+      wpm=5;
+    }
+    else {
+      wpm = a_wpm + 4;
+      straight_key=false;
+      loadWPM(wpm);
+    }
+  }
+  
   qsk_enable=digitalRead(NON_QSK);                //read non-QSK jumper and set system mode
   
   //Routine to key system, either with keyer or straight key
@@ -133,12 +153,13 @@ void loop()                                       //Main program loop
   fsm_sd();
   if ((state_sd == SHORT) && (wpm > 5)) {        //if active, decrement the wpm speed unless at lower limit
     wpm -= INCR;
+    if (wpm < 5) wpm = 5;                        //5wpm minimum
     quick_beep();
     straight_key = false;
     loadWPM(wpm);                                 //Update the current keyer speed
   }
   else if ( (state_sd == SHORT) && (wpm = 5)) {   //if down switch pressed at 5wpm, go to straight key mode
-    wpm -= INCR;
+    //wpm -= INCR;
     quick_beep();
     straight_key = true;
     loadWPM(wpm);      

@@ -78,7 +78,7 @@ void dit_tone()                         //dit sidetone for cw speed announcement
 {
     digitalWrite(SIDETONE, HIGH);
     delay(ditTime);
-    //delay(120);                       //uncomment these for and comment other delays for fixed cw speed announce
+    //delay(120);                       //uncomment these and comment other delays for fixed cw speed announce
     digitalWrite(SIDETONE, LOW);
     delay(ditTime);
     //delay(120);

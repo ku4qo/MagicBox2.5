@@ -93,8 +93,3 @@ void dah_tone()                       //dah sidetone for cw speed announcement
     delay(ditTime);
     //delay(120);
 }
-
-void save_keyer()
-{
-  EEPROM.update(EE_KEYER_SPEED, wpm); //save new speed in EEPROM
-}

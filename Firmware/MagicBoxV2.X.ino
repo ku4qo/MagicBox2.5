@@ -1,12 +1,12 @@
-/* Firmware for MagicBox V2.X - 02/04/2022
+/* Firmware for MagicBox V2.X - 03/20/2022
   by Jim Kortge K8IQY and Mike Maiorana KU4QO
-  Control button:
+  Control button (J2 on PCB rev 2.5A):
     quick press - announce current cw speed with the sidetone. Sent at current cw speed.
     long press  - tune mode turns on transmitter for 10 seconds. Cancel by pressing again.
   Non-QSK jumper disables full QSK and adds a timer to revert to RX mode after last TX.
   10k pot with wiper connected to A7 adjusts cw speed from 0 (straight key) to 35wpm
 */
-#define VERSION 02042022
+#define VERSION 03202022
 
 //set up for control lines
 #define BTN           5         //control button, momentary SPST, 0=closed
@@ -28,13 +28,14 @@
 #define     IAMBICB    0x10     // 0 for Iambic A, 1 for Iambic B
 
 //set up for keyer
+enum KSTYPE {IDLE, CHK_DIT, CHK_DAH, KEYED_PREP, KEYED, INTER_ELEMENT };
 unsigned long       ditTime;                       // No. milliseconds per dit
 unsigned char       keyerControl;
-unsigned char       keyerState;
-enum KSTYPE {IDLE, CHK_DIT, CHK_DAH, KEYED_PREP, KEYED, INTER_ELEMENT };
+unsigned char       keyerState = IDLE;
+
 int wpm;                                   //holds cw speed
 int a_wpm;                                 //analog reading of cw speed dial
-int a_wpm_save;                            //holds last dial cw reading
+int a_wpm_save = 99;                            //holds last dial cw reading
 bool straight_key = false;                 // straight key enable
 bool sk_on = false;                        //tracking straight key transmit status
 static long ktimer;                        // timer variable for keyer
@@ -97,6 +98,7 @@ void loop()                                         //Main program loop
     if ( a_wpm == 0 ) {
       straight_key=true;
       wpm=5;
+      loadWPM(wpm);
     }
     else {
       wpm = a_wpm + 4;
